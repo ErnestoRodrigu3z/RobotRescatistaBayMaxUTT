@@ -1,0 +1,23 @@
+void motorAdelante ()
+{
+  setMotores (HIGH, LOW, HIGH, LOW, velocidad, velocidad);
+}
+
+void motorRetroceder()
+{
+  setMotores (LOW, HIGH, LOW, HIGH, velocidad, velocidad);
+}
+
+void giroDerecha ()
+{
+  setMotores (HIGH, LOW, LOW, HIGH, velocidad, velocidad);
+}
+
+void giroIzquierda ()
+{
+  setMotores (LOW, HIGH, HIGH, LOW, velocidad, velocidad);
+}
+
+void paroMotores () {
+  setMotores (LOW, LOW, LOW, LOW, 0, 0);
+}
