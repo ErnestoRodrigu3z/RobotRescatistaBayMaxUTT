@@ -1,0 +1,63 @@
+   do {
+    if (Serial.available())
+    {
+      valor = Serial.read();
+      bufferString += valor; // bufferString = (char)Serial.read() + bufferString
+      if (valor == '\n' && banderaCargando == false)
+      {
+        lcd.clear ();
+        lcd.print ("Cargando ruta...");
+        banderaCargando = true;
+        bufferString = "";
+        continue;
+      }
+     if (valor == '\n' && banderaPersonaX [0] ==  false)
+     {
+      coordenadaPersonaX [0] = bufferString.toInt();
+      banderaPersonaX [0] = true;
+      bufferString = "";
+      continue;
+     }
+     if (valor == '\n' && banderaPersonaY [0] ==  false)
+     {
+      coordenadaPersonaY [0] = bufferString.toInt();
+      banderaPersonaY [0] = true;
+      bufferString = "";
+      continue;
+     }
+     
+     if (valor == '\n' && banderaPersonaX [1] ==  false)
+     {
+      coordenadaPersonaX [1] = bufferString.toInt();
+      banderaPersonaX [1] = true;
+      bufferString = "";
+      continue;
+     }
+     if (valor == '\n' && banderaPersonaY [1] ==  false)
+     {
+      coordenadaPersonaY [1] = bufferString.toInt();
+      banderaPersonaY [1] = true;
+      bufferString = "";
+      continue;
+     }
+     if (valor == '\n' && banderaPersonaX [2] ==  false)
+     {
+      coordenadaPersonaX [2] = bufferString.toInt();
+      banderaPersonaX [2] = true;
+      bufferString = "";
+      continue;
+     }
+     if (valor == '\n' && banderaPersonaY [2] ==  false)
+     {
+      coordenadaPersonaY [2] = bufferString.toInt();
+      banderaPersonaY [2] = true;
+      bufferString = "";
+      break;
+     }     
+    }
+  } while (true);
+  reinicioBanderasCoordenadas();
+  lcd.clear ();
+  lcd.print ("Ruta cargada...");
+  
+}
