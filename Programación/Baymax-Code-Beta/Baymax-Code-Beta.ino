@@ -46,8 +46,8 @@ uint16_t sensorValues[SensorCount];
 //_______AQUI CAMBIEREMOS LOS PARAMETROS DE NUESTRO ROBOT_________________
 int velocidad = 110; //variable para la velocidad, el maximo es 255
 float Kp = 0.5; //Kp = 1.5
-float Kd = 4.8; // Kp = 4.8
-float Ki = 0.01;  // Ki = 0.01
+float Kd = 5.2; // Kp = 4.8
+float Ki = 0.05;  // Ki = 0.01
 //variables para el control del sensado
 // Data para integral 
 int error1 = 0;
@@ -99,7 +99,7 @@ int y = 0;
 // Variables para el algoritmo de busqueda
 void busquedaPrincipal ();
 int posX = 0;
-int posY = -4;
+int posY = -3;
 int orientacion = 0;
 bool banderaSensor1 = true;
 bool banderaSensor2 = true;
@@ -107,26 +107,25 @@ bool banderaInicioRuta = false;
 bool banderaPosX = false;
 bool banderaPosY = false;
 void rutinaInicio ();
+void backStart ();
+
+
 
 bool banderaStart = false;
+int orientacionInicio = 0;
 int orientacionY = 0;
 int orientacionX = 0;
+int orientacionBack = 0;
+int orientacionBackX = 0;
+int orientacionBackY = 0;
 int pR = 0; // Persona a Rescatar
 bool banderaPr [5];
 void rutinaInicio ();
-void arribaIzquierda (); // Giro de 90° a la izquierda cuando el sensor se encuentra en direccion al eje positivo Y
-void arribaDerecha (); // Giro de 90° a la derecha cuando el sensor se encuentra direccion al eje positivo Y
-void abajoIzquierda (); // Giro de 90° a la izquierda cuando el sensor se encuentra en direccion al eje negativo Y
-void abajoDerecha (); // Giro de 90° a la derecha cuando el sensor se encuentra en direccion al eje negativo Y
-void derechaAbajo (); // Giro de 90° a la derecha cuando el sensor se encuentra en direccion al eje positivo X
-void derechaArriba (); // Giro de 90° a la izquierda cuando el sensor se encuentra en direccion al eje positivo X
-void izquierdaAbajo (); // Giro de 90° a la izquierda cuando el sensor se encuentra en direccion al eje negativo X
-void izquierdaArriba (); // Giro de 90° a la izquierda cuando el sensor se encuentra en direccion al eje negativo X
 bool prueba = false;
 
 //variables para rutina de motores
 int tiempoVuelta = 300;
-int tiempoAvance = 250;
+int tiempoAvance = 150;
 /*
  * Inicializacion del arduino
  */
@@ -142,7 +141,6 @@ int tiempoAvance = 250;
     digitalWrite (MotorADerecho, HIGH); digitalWrite (MotorARetroceso, LOW);
     digitalWrite (MotorBDerecho, LOW); digitalWrite (MotorBRetroceso, HIGH);
     delay(tiempoVuelta);
-    digitalWrite (ParoMotores, LOW);  
  }
 
  void giroIzquierda ()
@@ -155,8 +153,7 @@ int tiempoAvance = 250;
     delay(tiempoAvance);
     digitalWrite (MotorADerecho, LOW); digitalWrite (MotorARetroceso, HIGH);
     digitalWrite (MotorBDerecho, HIGH); digitalWrite (MotorBRetroceso, LOW);
-    delay(tiempoVuelta);
-    digitalWrite (ParoMotores, LOW);  
+    delay(tiempoVuelta+25);
  }
 
  void giroCompleto ()
@@ -232,30 +229,6 @@ void setup() {
 }
 
 //rutinas para el algoritmo de busqueda
-
-void rutinaInicio () {
-       uint16_t position = qtr.readLineWhite(sensorValues);
-     
-     if ((sensorValues [0] > 850 && sensorValues[7] > 850) && banderaSensor1 == false)
-     {
-      posY++;
-      banderaSensor1 = true;
-     }
-
-     if ((sensorValues [0] < 250 && sensorValues[7] < 250) && banderaInicioRuta == true)
-     {
-      banderaSensor1 = false;
-     }
-
-     if (posY == 0 && prueba == false)
-     {     
-      prueba = true;
-      banderaInicioRuta = false;
-      digitalWrite (ParoMotores, LOW);
-      delay (1000);
-      giroDerecha ();                    
-     }
-}
 
 // control PID de los motores
 
@@ -396,7 +369,7 @@ void recepcionDatos ()
       }
     }
   } while (true);
-  for (int i = 0; i < coordenadaPersonaX[0]; i++)
+  for (int i = 0; i < coordenadaPersonaY[0]; i++)
   {
     digitalWrite (ledCalibracion, HIGH); delay (20);
     digitalWrite (ledCalibracion, LOW); delay (20);
@@ -418,10 +391,11 @@ void loop() {
     esperandoDato = Serial.read ();
     
     if (esperandoDato == 'A')
-    {
-      digitalWrite (ParoMotores, HIGH);
+    {      
+      banderaStart = false;
       banderaSensor1 = false;
       banderaInicioRuta = true;
+      orientacionInicio = 1;
       esperandoDato = "";      
     }
 
@@ -445,14 +419,320 @@ void loop() {
     }
     
   }  
-    rutinaInicio();
+    if (prueba == false)
+    {
+     rutinaInicio(); 
+    }
+    if (banderaInicioRuta == true)
+    {      
+      busquedaPrincipal();           
+    }
     pid();            
 }
 
 //Algoritmo de búsqueda
+void rutinaInicio () {
+       uint16_t position = qtr.readLineWhite(sensorValues);
+     
+     if ((sensorValues [0] > 850 && sensorValues[7] > 850) && banderaSensor1 == false)
+     {
+      posY++;
+      banderaSensor1 = true;
+     }
 
-void busquedaPrincipal ()
+     if ((sensorValues [0] < 250 && sensorValues[7] < 250))
+     {
+      banderaSensor1 = false;
+     }
+
+     if (posY == 0 && prueba == false)
+     {     
+      prueba = true;
+      banderaInicioRuta = false;
+      digitalWrite (ParoMotores, LOW);
+      delay (500);                          
+     }
+}
+
+void lecturaCoordenadaX (bool ejeX) //eje X indicara la lectura de coordenada en dicho eje
 {
+ /*
+  * ejeX = true indica que se sumara posX
+  * ejeX = false indicara que se sumanra posY
+  */
+  uint16_t position = qtr.readLineWhite(sensorValues);
+  if ((sensorValues[7] > 850 && sensorValues [0] > 850) && banderaSensor1 == false)
+    {
+      (ejeX) ? posX++ : posX--;
+      banderaSensor1 = true;
+    }
+  if (sensorValues[7] < 400 && sensorValues [0] < 400)
+    {
+      banderaSensor1 = false;
+    }
+  if (posX == coordenadaPersonaX[pR])
+    {
+      digitalWrite (ParoMotores, LOW);       
+    }
+     
+}
+
+void lecturaCoordenadaY (bool ejeY) //eje Y indicara la lectura de coordenada en dicho eje
+{
+   uint16_t position = qtr.readLineWhite(sensorValues);
+  if ((sensorValues [0] > 850 && sensorValues[7] > 850) && banderaSensor1 == false)
+     {
+      (ejeY) ? posY++ : posY--;
+      banderaSensor1 = true;
+     }
+
+  if ((sensorValues [0] < 250 && sensorValues[7] < 250))
+     {
+      banderaSensor1 = false;
+     }
+  if (posY == coordenadaPersonaY[pR])
+     {
+       digitalWrite (ParoMotores, LOW);       
+     }
+     
+}
+void busquedaPrincipal (){
+  /*
+  * El robot tomará en cuenta que la matriz es un plano cartesiano
+  * Teniendo 8 regiones de interes Las cuales se toman cómo lo siguientes:
+  * R1(-2, -2); R2(2, -2); R3(2, 2); R4(-2, 2); R5(-1, -1); R6(1, -1); R7(1, 1); R8(-1, 1);
+  * El programa desarrollado en LabVIEW se encarga leer la tarjeta para determinar las regiones de interes en donde se encuentran las personas a rescatar
+  * y los obstaculos a evitar
+  * El resultado de esa lectura, generará las coordenadas las cualés se enviarán al Arduino mediante la comunicación HC-05
+  * El controlador se encargará de determinar la mejor ruta a seguir
+  */
+
+  /* OrientacionY
+   * Caso 1: Va hacía la izquierda partiendo del origen
+   * Caso 2: Va hacia la derecha partiendo del origen 
+   */
+   
+   /* OrientacionX
+    * Caso 1: El sensor está orientado hacia el Eje positivo Y
+    * Csso 2: El sensor está orientado hacia el eje negativo Y
+    */
+
+  switch (orientacionInicio)
+  {
+    case 1:
+      if (posX  > coordenadaPersonaX [pR])
+        {
+          digitalWrite (ParoMotores, HIGH);
+          giroIzquierda ();
+          orientacionX = 1;                                      
+          orientacionInicio = 0;                      
+        } 
+      if (posX < coordenadaPersonaX [pR])
+      {    
+        digitalWrite (ParoMotores, HIGH);
+        giroDerecha ();           
+        orientacionX = 2;         
+        orientacionInicio = 0;                 
+      } 
+    break; 
+
+    case 2:
+      if (posX  > coordenadaPersonaX [pR])
+      {
+        digitalWrite (ParoMotores, HIGH);
+        giroDerecha ();
+        orientacionX = 1;                                    
+        orientacionInicio = 0;                      
+      } 
+      if (posX < coordenadaPersonaX [pR])
+      {     
+        digitalWrite (ParoMotores, HIGH);
+        giroIzquierda ();        
+        orientacionX = 2;          
+        orientacionInicio = 0;                 
+      }    
+    break;
+  }
+
+  switch (orientacionX)
+  {
+   case 1:
+      lecturaCoordenadaX (false);          
+      if (coordenadaPersonaX [pR] == posX && posY > coordenadaPersonaY [pR])
+      {      
+        giroIzquierda();
+        orientacionY = 2;                   
+        orientacionX = 0;
+        banderaPr [pR] = true;        
+      } 
+      
+      if (coordenadaPersonaX [pR] == posX && posY < coordenadaPersonaY [pR])
+      {      
+        giroDerecha();
+        orientacionY = 1;                                
+        orientacionX = 0;
+        banderaPr [pR] = true;
+      }
+   break;
+
+    case 2:      
+      lecturaCoordenadaX (true);
+              
+      if (coordenadaPersonaX [pR] == posX && posY > coordenadaPersonaY [pR])
+      {        
+        giroDerecha(); 
+        orientacionY = 2;
+        orientacionX = 0;        
+
+      }
+      
+      if (coordenadaPersonaX [pR] == posX && posY < coordenadaPersonaY [pR])
+      {        
+        giroIzquierda(); 
+        orientacionY = 1;
+        orientacionX = 0;        
+      }      
+    break;
+  }
+  switch (orientacionY)
+  {
+    case 1:
+      lecturaCoordenadaY(true);
+      
+      if ((posX  == coordenadaPersonaX [pR]) && posY == coordenadaPersonaY [pR])
+      {        
+        digitalWrite (ParoMotores, LOW);
+        orientacionBack = 1;              
+      }
+    break;
+      
+    case 2:
+      lecturaCoordenadaY(false);
+      
+      if ((posX  == coordenadaPersonaX [pR]) && posY == coordenadaPersonaY [pR])
+      {        
+        digitalWrite (ParoMotores, LOW); 
+        orientacionBack = 2;       
+      }            
+    break;
+   }
+   if (false) backStart();
+  }
+
+void backStart ()
+{
+  /* OrientacionBack
+   * Caso 1: el sensor se encuentra volteando hacia positivo Y
+   * Caso 2: el sensor se encuentra volteando hacia negativo Y
+   */
+
+   /* OrientacionBackX
+    * Caso 1:
+    * Caso 2:
+    */
+  switch (orientacionBack)
+  {
+    case 1:      
+      if (posX  > 0 )
+      {        
+        digitalWrite (ParoMotores, HIGH);
+        giroIzquierda ();                  
+        orientacionBackX = 1;                                          
+        orientacionBack = 0;                     
+      } 
+      
+      if (posX < 0)
+      {        
+        digitalWrite (ParoMotores, HIGH);
+        giroDerecha ();                   
+        orientacionBackX = 2;                  
+        orientacionBack = 0;        
+      }          
+    break;
+    
+    case 2:    
+      if (posX  > 0 )
+      {        
+        digitalWrite (ParoMotores, HIGH);
+        giroDerecha ();                  
+        orientacionBackX = 1;                                          
+        orientacionBack = 0;                     
+      } 
+      
+      if (posX < 0)
+      {        
+        digitalWrite (ParoMotores, HIGH);
+        giroIzquierda ();                    
+        orientacionBackX = 2;                  
+        orientacionBack = 0;        
+      } 
+    break;
+  }
+  
+  switch (orientacionBackX)
+  {    
+    case 1:
+      lecturaCoordenadaX (false);
+      if (posX == 0 && posY > 0)
+      {
+        giroIzquierda ();
+        orientacionBackX = 0;
+        orientacionBackY = 2;
+      }
+
+      if (posX == 0 && posY < 0)
+      {
+        giroDerecha ();
+        orientacionBackX = 0;
+        orientacionBackY = 1;
+      }
+    break;
+
+    case 2:
+      lecturaCoordenadaX (true);
+  
+      if (posX == 0 && posY > 0)
+      {
+        giroDerecha();
+        orientacionBackX = 0;
+        orientacionBackY = 2;      
+      }
+  
+      if (posX == 0 && posY < 0)
+      {
+        giroIzquierda();
+        orientacionBackX = 0;
+        orientacionBackY = 1;                  
+      }
+    break;
+  }
+
+  switch (orientacionBackY)
+  {
+   case 1:
+    lecturaCoordenadaY (false);
+    if (posX == 0 && posY == 0)
+    {
+      orientacionInicio = 2;
+      orientacionBackY = 0;
+      pR++;
+      posY = 0; posX = 0;
+      //desahabilitar bandera      
+    }
+    break;
+
+    case 2:
+      lecturaCoordenadaY (true);
+      if (posX == 0 && posY == 0)
+      {
+       orientacionInicio = 1;
+       orientacionBackY = 0;
+       pR++;
+       posY = 0; posX = 0;
+       //desahabilitar bandera
+      }
+    break;
+  }
 
 }
 
