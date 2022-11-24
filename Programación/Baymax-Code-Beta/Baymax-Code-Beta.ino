@@ -45,9 +45,9 @@ uint16_t sensorValues[SensorCount];
 
 //_______AQUI CAMBIEREMOS LOS PARAMETROS DE NUESTRO ROBOT_________________
 int velocidad = 110; //variable para la velocidad, el maximo es 255
-float Kp = 0.5; //Kp = 1.5
-float Kd = 5.2; // Kp = 4.8
-float Ki = 0.05;  // Ki = 0.01
+float Kp = 0.6; //Kp = 1.5
+float Kd = 4.9; // Kp = 4.8
+float Ki = 0.01;  // Ki = 0.01
 //variables para el control del sensado
 // Data para integral 
 int error1 = 0;
@@ -110,7 +110,7 @@ void rutinaInicio ();
 void backStart ();
 
 
-
+bool regreso = false;
 bool banderaStart = false;
 int orientacionInicio = 0;
 int orientacionY = 0;
@@ -122,10 +122,12 @@ int pR = 0; // Persona a Rescatar
 bool banderaPr [5];
 void rutinaInicio ();
 bool prueba = false;
+bool sensorIzquierdo = false;
+bool sensorDerecho = false;
 
 //variables para rutina de motores
-int tiempoVuelta = 300;
-int tiempoAvance = 150;
+int tiempoVuelta = 220;
+int tiempoAvance = 180;
 /*
  * Inicializacion del arduino
  */
@@ -140,7 +142,7 @@ int tiempoAvance = 150;
     delay(tiempoAvance);
     digitalWrite (MotorADerecho, HIGH); digitalWrite (MotorARetroceso, LOW);
     digitalWrite (MotorBDerecho, LOW); digitalWrite (MotorBRetroceso, HIGH);
-    delay(tiempoVuelta);
+    delay(tiempoVuelta+80);
  }
 
  void giroIzquierda ()
@@ -452,35 +454,37 @@ void rutinaInicio () {
       digitalWrite (ParoMotores, LOW);
       delay (500);                          
      }
+     digitalWrite (ledCalibracion, banderaSensor1);
 }
 
-void lecturaCoordenadaX (bool ejeX) //eje X indicara la lectura de coordenada en dicho eje
+void lecturaCoordenadaX (bool ejeX, bool flancoDerecho, bool flancoIzquierdo) //eje X indicara la lectura de coordenada en dicho eje
 {
  /*
   * ejeX = true indica que se sumara posX
   * ejeX = false indicara que se sumanra posY
   */
   uint16_t position = qtr.readLineWhite(sensorValues);
-  if ((sensorValues[7] > 850 && sensorValues [0] > 850) && banderaSensor1 == false)
+  if ((sensorValues[7] > 850 && sensorValues [0] > 850) && banderaSensor1 == false && flancoDerecho == false && flancoIzquierdo == false)
     {
       (ejeX) ? posX++ : posX--;
-      banderaSensor1 = true;
+      banderaSensor1 = true;      
     }
-  if (sensorValues[7] < 400 && sensorValues [0] < 400)
+  if (sensorValues[7] < 400 && sensorValues [0] < 400 && flancoDerecho == false && flancoIzquierdo == false)
     {
       banderaSensor1 = false;
-    }
-  if (posX == coordenadaPersonaX[pR])
+    }    
+    
+  if ((posX == coordenadaPersonaX[pR] && regreso == false) || (posX == 0 && regreso == true))
     {
       digitalWrite (ParoMotores, LOW);       
     }
-     
+     digitalWrite (ledCalibracion, banderaSensor1);
 }
 
-void lecturaCoordenadaY (bool ejeY) //eje Y indicara la lectura de coordenada en dicho eje
+void lecturaCoordenadaY (bool ejeY, bool flancoDerecho, bool flancoIzquierdo) //eje Y indicara la lectura de coordenada en dicho eje
 {
    uint16_t position = qtr.readLineWhite(sensorValues);
-  if ((sensorValues [0] > 850 && sensorValues[7] > 850) && banderaSensor1 == false)
+  if ((sensorValues [0] > 850 && sensorValues[7] > 850) && banderaSensor1 == false && flancoDerecho == false && flancoIzquierdo == false)
      {
       (ejeY) ? posY++ : posY--;
       banderaSensor1 = true;
@@ -490,10 +494,11 @@ void lecturaCoordenadaY (bool ejeY) //eje Y indicara la lectura de coordenada en
      {
       banderaSensor1 = false;
      }
-  if (posY == coordenadaPersonaY[pR])
+  if ((posY == coordenadaPersonaY[pR] && regreso == false) || (posY == 0 && regreso == true))
      {
        digitalWrite (ParoMotores, LOW);       
      }
+     digitalWrite (ledCalibracion, banderaSensor1);
      
 }
 void busquedaPrincipal (){
@@ -533,7 +538,9 @@ void busquedaPrincipal (){
         giroDerecha ();           
         orientacionX = 2;         
         orientacionInicio = 0;                 
-      } 
+      }
+        sensorDerecho = false;
+        sensorIzquierdo = false;  
     break; 
 
     case 2:
@@ -550,14 +557,16 @@ void busquedaPrincipal (){
         giroIzquierda ();        
         orientacionX = 2;          
         orientacionInicio = 0;                 
-      }    
+      }
+        sensorDerecho = false;
+        sensorIzquierdo = false;            
     break;
   }
 
   switch (orientacionX)
   {
    case 1:
-      lecturaCoordenadaX (false);          
+      lecturaCoordenadaX (false, false, false);          
       if (coordenadaPersonaX [pR] == posX && posY > coordenadaPersonaY [pR])
       {      
         giroIzquierda();
@@ -576,7 +585,7 @@ void busquedaPrincipal (){
    break;
 
     case 2:      
-      lecturaCoordenadaX (true);
+      lecturaCoordenadaX (true, false, false);
               
       if (coordenadaPersonaX [pR] == posX && posY > coordenadaPersonaY [pR])
       {        
@@ -597,26 +606,57 @@ void busquedaPrincipal (){
   switch (orientacionY)
   {
     case 1:
-      lecturaCoordenadaY(true);
+      lecturaCoordenadaY(true, sensorDerecho, sensorIzquierdo);
       
       if ((posX  == coordenadaPersonaX [pR]) && posY == coordenadaPersonaY [pR])
       {        
         digitalWrite (ParoMotores, LOW);
-        orientacionBack = 1;              
+        orientacionBack = 1;
+        regreso = true;
+        orientacionY = 0;
+        delay(500);              
       }
+
+      if ((coordenadaPersonaX[pR] == 2 && coordenadaPersonaY [pR] == 2) || (coordenadaPersonaX[pR] == -2 && coordenadaPersonaY [pR] == -2))
+      {        
+        sensorDerecho = false;
+        sensorIzquierdo = true;
+      }
+           
+      if ((coordenadaPersonaX[pR] == 2 && coordenadaPersonaY [pR] == -2) || (coordenadaPersonaX[pR] == -2 && coordenadaPersonaY [pR] == 2))
+      {
+        sensorDerecho = true;
+        sensorIzquierdo = false;                
+      }      
+      
     break;
       
     case 2:
-      lecturaCoordenadaY(false);
+      lecturaCoordenadaY(false, sensorDerecho, sensorIzquierdo);
       
       if ((posX  == coordenadaPersonaX [pR]) && posY == coordenadaPersonaY [pR])
       {        
         digitalWrite (ParoMotores, LOW); 
-        orientacionBack = 2;       
-      }            
-    break;
+        orientacionBack = 2;
+        orientacionY = 0;
+        regreso = true;
+        delay(500);       
+      }
+
+      if ((coordenadaPersonaX[pR] == 2 && coordenadaPersonaY [pR] == 2) || (coordenadaPersonaX[pR] == -2 && coordenadaPersonaY [pR] == -2))
+      {        
+        sensorDerecho = false;
+        sensorIzquierdo = true;
+      }
+           
+      if ((coordenadaPersonaX[pR] == 2 && coordenadaPersonaY [pR] == -2) || (coordenadaPersonaX[pR] == -2 && coordenadaPersonaY [pR] == 2))
+      {
+        sensorDerecho = true;
+        sensorIzquierdo = false;                
+      }                 
+          break;
    }
-   if (false) backStart();
+   if (regreso == true) backStart();
   }
 
 void backStart ()
@@ -655,7 +695,7 @@ void backStart ()
       {        
         digitalWrite (ParoMotores, HIGH);
         giroDerecha ();                  
-        orientacionBackX = 1;                                          
+        orientacionBackX = 2;                                          
         orientacionBack = 0;                     
       } 
       
@@ -663,7 +703,7 @@ void backStart ()
       {        
         digitalWrite (ParoMotores, HIGH);
         giroIzquierda ();                    
-        orientacionBackX = 2;                  
+        orientacionBackX = 1;                  
         orientacionBack = 0;        
       } 
     break;
@@ -672,63 +712,89 @@ void backStart ()
   switch (orientacionBackX)
   {    
     case 1:
-      lecturaCoordenadaX (false);
+      lecturaCoordenadaX (false, sensorDerecho, sensorIzquierdo);
       if (posX == 0 && posY > 0)
       {
         giroIzquierda ();
         orientacionBackX = 0;
-        orientacionBackY = 2;
+        orientacionBackY = 1;
       }
 
       if (posX == 0 && posY < 0)
       {
         giroDerecha ();
         orientacionBackX = 0;
-        orientacionBackY = 1;
+        orientacionBackY = 2;
       }
+
+      if ((coordenadaPersonaX[pR] == 2 && coordenadaPersonaY [pR] == 2) || (coordenadaPersonaX[pR] == -2 && coordenadaPersonaY [pR] == -2))
+      {        
+        sensorDerecho = false;
+        sensorIzquierdo = true;
+      }
+           
+      if ((coordenadaPersonaX[pR] == 2 && coordenadaPersonaY [pR] == -2) || (coordenadaPersonaX[pR] == -2 && coordenadaPersonaY [pR] == 2))
+      {
+        sensorDerecho = true;
+        sensorIzquierdo = false;                
+      }       
     break;
 
     case 2:
-      lecturaCoordenadaX (true);
+      lecturaCoordenadaX (true, sensorDerecho, sensorIzquierdo);
   
       if (posX == 0 && posY > 0)
       {
         giroDerecha();
         orientacionBackX = 0;
-        orientacionBackY = 2;      
+        orientacionBackY = 1;      
       }
   
       if (posX == 0 && posY < 0)
       {
         giroIzquierda();
         orientacionBackX = 0;
-        orientacionBackY = 1;                  
+        orientacionBackY = 2;                  
       }
+
+      if ((coordenadaPersonaX[pR] == 2 && coordenadaPersonaY [pR] == 2) || (coordenadaPersonaX[pR] == -2 && coordenadaPersonaY [pR] == -2))
+      {        
+        sensorDerecho = false;
+        sensorIzquierdo = true;
+      }
+           
+      if ((coordenadaPersonaX[pR] == 2 && coordenadaPersonaY [pR] == -2) || (coordenadaPersonaX[pR] == -2 && coordenadaPersonaY [pR] == 2))
+      {
+        sensorDerecho = true;
+        sensorIzquierdo = false;                
+      }       
     break;
   }
 
   switch (orientacionBackY)
   {
    case 1:
-    lecturaCoordenadaY (false);
+    lecturaCoordenadaY (false, false, false);
     if (posX == 0 && posY == 0)
     {
       orientacionInicio = 2;
       orientacionBackY = 0;
       pR++;
       posY = 0; posX = 0;
+      regreso = false;
       //desahabilitar bandera      
     }
     break;
 
     case 2:
-      lecturaCoordenadaY (true);
+      lecturaCoordenadaY (true, false, false);
       if (posX == 0 && posY == 0)
       {
        orientacionInicio = 1;
        orientacionBackY = 0;
        pR++;
        posY = 0; posX = 0;
+       regreso = false;
        //desahabilitar bandera
       }
     break;

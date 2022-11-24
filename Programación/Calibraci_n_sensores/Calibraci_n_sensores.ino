@@ -168,13 +168,13 @@ void loop()
     Serial.print('\t');
   }
 
-if ((sensorValues [0] > 850 && sensorValues[7] > 850) && banderaSensor1 == false && banderaInicioRuta == true)
+if ((sensorValues [0] > 850 && sensorValues[7] > 850) && banderaSensor1 == false)
      {
       posY++;
       banderaSensor1 = true;
      }
 
-     if ((sensorValues [0] < 250 && sensorValues[7] < 250) && banderaInicioRuta == true)
+     if ((sensorValues [0] < 250 && sensorValues[7] < 250))
      {
       banderaSensor1 = false;
      }

@@ -1,0 +1,24 @@
+  if (sensorValues [0] > 850 && banderaSensor1 == false && flancoDerecho == true && flancoIzquierdo == false)
+    {
+      (ejeX) ? posX++ : posX--;
+      banderaSensor1 = true;
+    }
+
+  if (sensorValues [0] < 400 && flancoDerecho == true && flancoIzquierdo == false)
+    {
+      banderaSensor1 = false;
+    }
+
+  if (sensorValues [0] > 850 && banderaSensor1 == false && flancoDerecho == false && flancoIzquierdo == true)
+    {
+      (ejeX) ? posX++ : posX--;
+      banderaSensor1 = true;
+    }
+
+  if (sensorValues [0] < 400 && flancoDerecho == false && flancoIzquierdo == true)
+    {
+      banderaSensor1 = false;
+    }
+
+
+
