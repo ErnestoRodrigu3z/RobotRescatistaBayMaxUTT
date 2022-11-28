@@ -45,9 +45,9 @@ uint16_t sensorValues[SensorCount];
 
 //_______AQUI CAMBIEREMOS LOS PARAMETROS DE NUESTRO ROBOT_________________
 int velocidad = 110; //variable para la velocidad, el maximo es 255
-float Kp = 0.6; //Kp = 1.5
-float Kd = 4.9; // Kp = 4.8
-float Ki = 0.01;  // Ki = 0.01
+float Kp = 0.33; //Kp = 1.5
+float Kd = 1.78; // Kp = 4.8
+float Ki = 0.02;  // Ki = 0.01
 //variables para el control del sensado
 // Data para integral 
 int error1 = 0;
@@ -108,7 +108,8 @@ bool banderaPosX = false;
 bool banderaPosY = false;
 void rutinaInicio ();
 void backStart ();
-
+int limiteInferior = 400;
+int limiteSuperior = 700;
 
 bool regreso = false;
 bool banderaStart = false;
@@ -126,13 +127,13 @@ bool sensorIzquierdo = false;
 bool sensorDerecho = false;
 
 //variables para rutina de motores
-int tiempoVuelta = 220;
-int tiempoAvance = 180;
+int tiempoVuelta = 300;
+int tiempoAvance = 100;
 /*
  * Inicializacion del arduino
  */
 
- void giroDerecha ()
+ void giroDerecha (int desfase)
  {
     digitalWrite (ParoMotores, HIGH); 
     analogWrite (PWMotorA, velocidad);
@@ -142,10 +143,10 @@ int tiempoAvance = 180;
     delay(tiempoAvance);
     digitalWrite (MotorADerecho, HIGH); digitalWrite (MotorARetroceso, LOW);
     digitalWrite (MotorBDerecho, LOW); digitalWrite (MotorBRetroceso, HIGH);
-    delay(tiempoVuelta+80);
+    delay(tiempoVuelta + desfase);
  }
 
- void giroIzquierda ()
+ void giroIzquierda (int desfase)
  {
     digitalWrite (ParoMotores, HIGH); 
     analogWrite (PWMotorA, velocidad);
@@ -155,7 +156,7 @@ int tiempoAvance = 180;
     delay(tiempoAvance);
     digitalWrite (MotorADerecho, LOW); digitalWrite (MotorARetroceso, HIGH);
     digitalWrite (MotorBDerecho, HIGH); digitalWrite (MotorBRetroceso, LOW);
-    delay(tiempoVuelta+25);
+    delay(tiempoVuelta + desfase);
  }
 
  void giroCompleto ()
@@ -436,13 +437,13 @@ void loop() {
 void rutinaInicio () {
        uint16_t position = qtr.readLineWhite(sensorValues);
      
-     if ((sensorValues [0] > 850 && sensorValues[7] > 850) && banderaSensor1 == false)
+     if ((sensorValues [0] > limiteSuperior && sensorValues[7] > limiteSuperior) && banderaSensor1 == false)
      {
       posY++;
       banderaSensor1 = true;
      }
 
-     if ((sensorValues [0] < 250 && sensorValues[7] < 250))
+     if (sensorValues [0] < limiteInferior && sensorValues[7] < limiteInferior)
      {
       banderaSensor1 = false;
      }
@@ -464,12 +465,33 @@ void lecturaCoordenadaX (bool ejeX, bool flancoDerecho, bool flancoIzquierdo) //
   * ejeX = false indicara que se sumanra posY
   */
   uint16_t position = qtr.readLineWhite(sensorValues);
-  if ((sensorValues[7] > 850 && sensorValues [0] > 850) && banderaSensor1 == false && flancoDerecho == false && flancoIzquierdo == false)
+  if ((sensorValues[7] > limiteSuperior && sensorValues [0] > limiteSuperior) && banderaSensor1 == false && flancoDerecho == false && flancoIzquierdo == false)
     {
       (ejeX) ? posX++ : posX--;
       banderaSensor1 = true;      
     }
-  if (sensorValues[7] < 400 && sensorValues [0] < 400 && flancoDerecho == false && flancoIzquierdo == false)
+  if (sensorValues[7] < limiteInferior && sensorValues [0] < limiteInferior && flancoDerecho == false && flancoIzquierdo == false)
+    {
+      banderaSensor1 = false;
+    }
+   if (sensorValues [0] > limiteSuperior && banderaSensor1 == false && flancoDerecho == true && flancoIzquierdo == false)
+    {
+      (ejeX) ? posX++ : posX--;
+      banderaSensor1 = true;
+    }
+
+  if (sensorValues [0] < limiteInferior && flancoDerecho == true && flancoIzquierdo == false)
+    {
+      banderaSensor1 = false;
+    }
+
+  if (sensorValues [7] > limiteSuperior && banderaSensor1 == false && flancoDerecho == false && flancoIzquierdo == true)
+    {
+      (ejeX) ? posX++ : posX--;
+      banderaSensor1 = true;
+    }
+
+  if (sensorValues [7] < limiteSuperior && flancoDerecho == false && flancoIzquierdo == true)
     {
       banderaSensor1 = false;
     }    
@@ -484,13 +506,13 @@ void lecturaCoordenadaX (bool ejeX, bool flancoDerecho, bool flancoIzquierdo) //
 void lecturaCoordenadaY (bool ejeY, bool flancoDerecho, bool flancoIzquierdo) //eje Y indicara la lectura de coordenada en dicho eje
 {
    uint16_t position = qtr.readLineWhite(sensorValues);
-  if ((sensorValues [0] > 850 && sensorValues[7] > 850) && banderaSensor1 == false && flancoDerecho == false && flancoIzquierdo == false)
+  if ((sensorValues [0] > limiteSuperior && sensorValues[7] > limiteSuperior) && banderaSensor1 == false && flancoDerecho == false && flancoIzquierdo == false)
      {
       (ejeY) ? posY++ : posY--;
       banderaSensor1 = true;
      }
 
-  if ((sensorValues [0] < 250 && sensorValues[7] < 250))
+  if (sensorValues [0] < limiteInferior && sensorValues[7] < limiteInferior)
      {
       banderaSensor1 = false;
      }
@@ -528,14 +550,14 @@ void busquedaPrincipal (){
       if (posX  > coordenadaPersonaX [pR])
         {
           digitalWrite (ParoMotores, HIGH);
-          giroIzquierda ();
+          giroIzquierda (50);
           orientacionX = 1;                                      
           orientacionInicio = 0;                      
         } 
       if (posX < coordenadaPersonaX [pR])
       {    
         digitalWrite (ParoMotores, HIGH);
-        giroDerecha ();           
+        giroDerecha (50);           
         orientacionX = 2;         
         orientacionInicio = 0;                 
       }
@@ -547,14 +569,14 @@ void busquedaPrincipal (){
       if (posX  > coordenadaPersonaX [pR])
       {
         digitalWrite (ParoMotores, HIGH);
-        giroDerecha ();
+        giroDerecha (0);
         orientacionX = 1;                                    
         orientacionInicio = 0;                      
       } 
       if (posX < coordenadaPersonaX [pR])
       {     
         digitalWrite (ParoMotores, HIGH);
-        giroIzquierda ();        
+        giroIzquierda (0);        
         orientacionX = 2;          
         orientacionInicio = 0;                 
       }
@@ -569,7 +591,7 @@ void busquedaPrincipal (){
       lecturaCoordenadaX (false, false, false);          
       if (coordenadaPersonaX [pR] == posX && posY > coordenadaPersonaY [pR])
       {      
-        giroIzquierda();
+        giroIzquierda(0);
         orientacionY = 2;                   
         orientacionX = 0;
         banderaPr [pR] = true;        
@@ -577,7 +599,7 @@ void busquedaPrincipal (){
       
       if (coordenadaPersonaX [pR] == posX && posY < coordenadaPersonaY [pR])
       {      
-        giroDerecha();
+        giroDerecha(50);
         orientacionY = 1;                                
         orientacionX = 0;
         banderaPr [pR] = true;
@@ -589,7 +611,7 @@ void busquedaPrincipal (){
               
       if (coordenadaPersonaX [pR] == posX && posY > coordenadaPersonaY [pR])
       {        
-        giroDerecha(); 
+        giroDerecha(0); 
         orientacionY = 2;
         orientacionX = 0;        
 
@@ -597,7 +619,7 @@ void busquedaPrincipal (){
       
       if (coordenadaPersonaX [pR] == posX && posY < coordenadaPersonaY [pR])
       {        
-        giroIzquierda(); 
+        giroIzquierda(0); 
         orientacionY = 1;
         orientacionX = 0;        
       }      
@@ -676,7 +698,7 @@ void backStart ()
       if (posX  > 0 )
       {        
         digitalWrite (ParoMotores, HIGH);
-        giroIzquierda ();                  
+        giroIzquierda (0);                  
         orientacionBackX = 1;                                          
         orientacionBack = 0;                     
       } 
@@ -684,7 +706,7 @@ void backStart ()
       if (posX < 0)
       {        
         digitalWrite (ParoMotores, HIGH);
-        giroDerecha ();                   
+        giroDerecha (0);                   
         orientacionBackX = 2;                  
         orientacionBack = 0;        
       }          
@@ -694,7 +716,7 @@ void backStart ()
       if (posX  > 0 )
       {        
         digitalWrite (ParoMotores, HIGH);
-        giroDerecha ();                  
+        giroDerecha (0);                  
         orientacionBackX = 2;                                          
         orientacionBack = 0;                     
       } 
@@ -702,7 +724,7 @@ void backStart ()
       if (posX < 0)
       {        
         digitalWrite (ParoMotores, HIGH);
-        giroIzquierda ();                    
+        giroIzquierda (0);                    
         orientacionBackX = 1;                  
         orientacionBack = 0;        
       } 
@@ -715,14 +737,14 @@ void backStart ()
       lecturaCoordenadaX (false, sensorDerecho, sensorIzquierdo);
       if (posX == 0 && posY > 0)
       {
-        giroIzquierda ();
+        giroIzquierda (0);
         orientacionBackX = 0;
         orientacionBackY = 1;
       }
 
       if (posX == 0 && posY < 0)
       {
-        giroDerecha ();
+        giroDerecha (0);
         orientacionBackX = 0;
         orientacionBackY = 2;
       }
@@ -745,14 +767,14 @@ void backStart ()
   
       if (posX == 0 && posY > 0)
       {
-        giroDerecha();
+        giroDerecha(0);
         orientacionBackX = 0;
         orientacionBackY = 1;      
       }
   
       if (posX == 0 && posY < 0)
       {
-        giroIzquierda();
+        giroIzquierda(0);
         orientacionBackX = 0;
         orientacionBackY = 2;                  
       }
